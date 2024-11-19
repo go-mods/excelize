@@ -1451,8 +1451,9 @@ func TestCalcCellValue(t *testing.T) {
 		"=ISNONTEXT(\"Excelize\")": "FALSE",
 		"=ISNONTEXT(NA())":         "TRUE",
 		// ISNUMBER
-		"=ISNUMBER(A1)": "TRUE",
-		"=ISNUMBER(D1)": "FALSE",
+		"=ISNUMBER(A1)":    "TRUE",
+		"=ISNUMBER(D1)":    "FALSE",
+		"=ISNUMBER(A1:B1)": "TRUE",
 		// ISODD
 		"=ISODD(A1)": "TRUE",
 		"=ISODD(A2)": "FALSE",
@@ -1526,6 +1527,7 @@ func TestCalcCellValue(t *testing.T) {
 		"=OR(1=2,2=3)":            "FALSE",
 		"=OR(1=1,2=3)":            "TRUE",
 		"=OR(\"TRUE\",\"FALSE\")": "TRUE",
+		"=OR(A1:B1)":              "TRUE",
 		// SWITCH
 		"=SWITCH(1,1,\"A\",2,\"B\",3,\"C\",\"N\")": "A",
 		"=SWITCH(3,1,\"A\",2,\"B\",3,\"C\",\"N\")": "C",
@@ -1538,8 +1540,9 @@ func TestCalcCellValue(t *testing.T) {
 		"=XOR(1>0,0>1,INT(0),INT(1),A1:A4,2)": "FALSE",
 		// Date and Time Functions
 		// DATE
-		"=DATE(2020,10,21)": "2020-10-21 00:00:00 +0000 UTC",
-		"=DATE(1900,1,1)":   "1899-12-31 00:00:00 +0000 UTC",
+		"=DATE(2020,10,21)":   "44125",
+		"=DATE(2020,10,21)+1": "44126",
+		"=DATE(1900,1,1)":     "1",
 		// DATEDIF
 		"=DATEDIF(43101,43101,\"D\")":  "0",
 		"=DATEDIF(43101,43891,\"d\")":  "790",
@@ -1723,6 +1726,10 @@ func TestCalcCellValue(t *testing.T) {
 		"=CONCATENATE(TRUE(),1,FALSE(),\"0\",INT(2))": "TRUE1FALSE02",
 		"=CONCATENATE(MUNIT(2))":                      "1001",
 		"=CONCATENATE(A1:B2)":                         "1425",
+		// DBCS
+		"=DBCS(\"\")":        "",
+		"=DBCS(123.456)":     "123.456",
+		"=DBCS(\"123.456\")": "123.456",
 		// EXACT
 		"=EXACT(1,\"1\")":     "TRUE",
 		"=EXACT(1,1)":         "TRUE",
@@ -1744,6 +1751,7 @@ func TestCalcCellValue(t *testing.T) {
 		"=FIND(\"\",\"Original Text\")":    "1",
 		"=FIND(\"\",\"Original Text\",2)":  "2",
 		"=FIND(\"s\",\"Sales\",2)":         "5",
+		"=FIND(D1:E2,\"Month\")":           "1",
 		// FINDB
 		"=FINDB(\"T\",\"Original Text\")":   "10",
 		"=FINDB(\"t\",\"Original Text\")":   "13",
@@ -2109,6 +2117,16 @@ func TestCalcCellValue(t *testing.T) {
 		"=DDB(10000,1000,5,5)": "296",
 		// DISC
 		"=DISC(\"04/01/2016\",\"03/31/2021\",95,100)": "0.01",
+		// DOLLAR
+		"=DOLLAR(1234.56)":     "$1,234.56",
+		"=DOLLAR(1234.56,0)":   "$1,235",
+		"=DOLLAR(1234.56,1)":   "$1,234.6",
+		"=DOLLAR(1234.56,2)":   "$1,234.56",
+		"=DOLLAR(1234.56,3)":   "$1,234.560",
+		"=DOLLAR(1234.56,-2)":  "$1,200",
+		"=DOLLAR(1234.56,-3)":  "$1,000",
+		"=DOLLAR(-1234.56,3)":  "($1,234.560)",
+		"=DOLLAR(-1234.56,-3)": "($1,000)",
 		// DOLLARDE
 		"=DOLLARDE(1.01,16)": "1.0625",
 		// DOLLARFR
@@ -2236,6 +2254,8 @@ func TestCalcCellValue(t *testing.T) {
 		// YIELDMAT
 		"=YIELDMAT(\"01/01/2017\",\"06/30/2018\",\"06/01/2014\",5.5%,101)":   "0.0419422478838651",
 		"=YIELDMAT(\"01/01/2017\",\"06/30/2018\",\"06/01/2014\",5.5%,101,0)": "0.0419422478838651",
+		// DISPIMG
+		"=_xlfn.DISPIMG(\"ID_********************************\",1)": "ID_********************************",
 	}
 	for formula, expected := range mathCalc {
 		f := prepareCalcData(cellData)
@@ -3657,7 +3677,6 @@ func TestCalcCellValue(t *testing.T) {
 		"=NOT(\"\")":  {"#VALUE!", "NOT expects 1 boolean or numeric argument"},
 		// OR
 		"=OR(\"text\")":                          {"#VALUE!", "#VALUE!"},
-		"=OR(A1:B1)":                             {"#VALUE!", "#VALUE!"},
 		"=OR(\"1\",\"TRUE\",\"FALSE\")":          {"#VALUE!", "#VALUE!"},
 		"=OR()":                                  {"#VALUE!", "OR requires at least 1 argument"},
 		"=OR(1" + strings.Repeat(",1", 30) + ")": {"#VALUE!", "OR accepts at most 30 arguments"},
@@ -3834,6 +3853,9 @@ func TestCalcCellValue(t *testing.T) {
 		// CONCATENATE
 		"=CONCATENATE(NA())":  {"#N/A", "#N/A"},
 		"=CONCATENATE(1,1/0)": {"#DIV/0!", "#DIV/0!"},
+		// DBCS
+		"=DBCS(NA())": {"#N/A", "#N/A"},
+		"=DBCS()":     {"#VALUE!", "DBCS requires 1 argument"},
 		// EXACT
 		"=EXACT()":      {"#VALUE!", "EXACT requires 2 arguments"},
 		"=EXACT(1,2,3)": {"#VALUE!", "EXACT requires 2 arguments"},
@@ -4238,6 +4260,12 @@ func TestCalcCellValue(t *testing.T) {
 		"=DISC(\"04/01/2016\",\"03/31/2021\",0,100)":       {"#NUM!", "DISC requires pr > 0"},
 		"=DISC(\"04/01/2016\",\"03/31/2021\",95,0)":        {"#NUM!", "DISC requires redemption > 0"},
 		"=DISC(\"04/01/2016\",\"03/31/2021\",95,100,5)":    {"#NUM!", "invalid basis"},
+		// DOLLAR
+		"DOLLAR()":       {"#VALUE!", "DOLLAR requires at least 1 argument"},
+		"DOLLAR(0,0,0)":  {"#VALUE!", "DOLLAR requires 1 or 2 arguments"},
+		"DOLLAR(\"\")":   {"#VALUE!", "strconv.ParseFloat: parsing \"\": invalid syntax"},
+		"DOLLAR(0,\"\")": {"#VALUE!", "strconv.ParseFloat: parsing \"\": invalid syntax"},
+		"DOLLAR(1,200)":  {"#VALUE!", "decimal value should be less than 128"},
 		// DOLLARDE
 		"=DOLLARDE()":       {"#VALUE!", "DOLLARDE requires 2 arguments"},
 		"=DOLLARDE(\"\",0)": {"#VALUE!", "strconv.ParseFloat: parsing \"\": invalid syntax"},
@@ -4609,6 +4637,8 @@ func TestCalcCellValue(t *testing.T) {
 		"=YIELDMAT(\"01/01/2017\",\"06/30/2018\",\"06/01/2014\",-1,101,0)":    {"#NUM!", "YIELDMAT requires rate >= 0"},
 		"=YIELDMAT(\"01/01/2017\",\"06/30/2018\",\"06/01/2014\",1,0,0)":       {"#NUM!", "YIELDMAT requires pr > 0"},
 		"=YIELDMAT(\"01/01/2017\",\"06/30/2018\",\"06/01/2014\",5.5%,101,5)":  {"#NUM!", "invalid basis"},
+		// DISPIMG
+		"=_xlfn.DISPIMG()": {"#VALUE!", "DISPIMG requires 2 numeric arguments"},
 	}
 	for formula, expected := range mathCalcError {
 		f := prepareCalcData(cellData)
@@ -4685,7 +4715,7 @@ func TestCalcCellValue(t *testing.T) {
 	assert.EqualError(t, err, "sheet SheetN does not exist")
 	// Test get calculated cell value with invalid sheet name
 	_, err = f.CalcCellValue("Sheet:1", "A1")
-	assert.EqualError(t, err, ErrSheetNameInvalid.Error())
+	assert.Equal(t, ErrSheetNameInvalid, err)
 	// Test get calculated cell value with not support formula
 	f = prepareCalcData(cellData)
 	assert.NoError(t, f.SetCellFormula("Sheet1", "A1", "=UNSUPPORT(A1)"))
@@ -4762,7 +4792,7 @@ func TestCalcOR(t *testing.T) {
 	})
 	fn := formulaFuncs{}
 	result := fn.OR(argsList)
-	assert.Equal(t, result.String, "FALSE")
+	assert.Equal(t, result.Value(), "FALSE")
 	assert.Empty(t, result.Error)
 }
 
@@ -4817,6 +4847,119 @@ func TestCalcCompareFormulaArgMatrix(t *testing.T) {
 	lhs = newMatrixFormulaArg([][]formulaArg{{newNumberFormulaArg(1)}})
 	rhs = newMatrixFormulaArg([][]formulaArg{{newNumberFormulaArg(0)}})
 	assert.Equal(t, compareFormulaArgMatrix(lhs, rhs, newNumberFormulaArg(matchModeMaxLess), false), criteriaG)
+}
+
+func TestCalcANCHORARRAY(t *testing.T) {
+	f := NewFile()
+	assert.NoError(t, f.SetCellValue("Sheet1", "A1", 1))
+	assert.NoError(t, f.SetCellValue("Sheet1", "A2", 2))
+	formulaType, ref := STCellFormulaTypeArray, "B1:B2"
+	assert.NoError(t, f.SetCellFormula("Sheet1", "B1", "A1:A2",
+		FormulaOpts{Ref: &ref, Type: &formulaType}))
+	assert.NoError(t, f.SetCellFormula("Sheet1", "C1", "SUM(_xlfn.ANCHORARRAY($B$1))"))
+	result, err := f.CalcCellValue("Sheet1", "C1")
+	assert.NoError(t, err)
+	assert.Equal(t, "3", result)
+
+	assert.NoError(t, f.SetCellFormula("Sheet1", "C1", "SUM(_xlfn.ANCHORARRAY(\"\",\"\"))"))
+	result, err = f.CalcCellValue("Sheet1", "C1")
+	assert.EqualError(t, err, "ANCHORARRAY requires 1 numeric argument")
+	assert.Equal(t, "#VALUE!", result)
+
+	fn := &formulaFuncs{f: f, sheet: "SheetN"}
+	argsList := list.New()
+	argsList.PushBack(newStringFormulaArg("$B$1"))
+	formulaArg := fn.ANCHORARRAY(argsList)
+	assert.Equal(t, "sheet SheetN does not exist", formulaArg.Value())
+
+	fn.sheet = "Sheet1"
+	argsList = argsList.Init()
+	arg := newStringFormulaArg("$A$1")
+	arg.cellRefs = list.New()
+	arg.cellRefs.PushBack(cellRef{Row: 1, Col: 1})
+	argsList.PushBack(arg)
+	formulaArg = fn.ANCHORARRAY(argsList)
+	assert.Equal(t, ArgEmpty, formulaArg.Type)
+
+	ws, ok := f.Sheet.Load("xl/worksheets/sheet1.xml")
+	assert.True(t, ok)
+	ws.(*xlsxWorksheet).SheetData.Row[0].C[0].F = &xlsxF{}
+	formulaArg = fn.ANCHORARRAY(argsList)
+	assert.Equal(t, ArgError, formulaArg.Type)
+	assert.Equal(t, ErrParameterInvalid.Error(), formulaArg.Value())
+
+	argsList = argsList.Init()
+	arg = newStringFormulaArg("$B$1")
+	arg.cellRefs = list.New()
+	arg.cellRefs.PushBack(cellRef{Row: 1, Col: 1, Sheet: "SheetN"})
+	argsList.PushBack(arg)
+	ws.(*xlsxWorksheet).SheetData.Row[0].C[0].F = &xlsxF{Ref: "A1:A1"}
+	formulaArg = fn.ANCHORARRAY(argsList)
+	assert.Equal(t, ArgError, formulaArg.Type)
+	assert.Equal(t, "sheet SheetN does not exist", formulaArg.Value())
+}
+
+func TestCalcArrayFormula(t *testing.T) {
+	t.Run("matrix_multiplication", func(t *testing.T) {
+		f := NewFile()
+		assert.NoError(t, f.SetSheetRow("Sheet1", "A1", &[]int{1, 2}))
+		assert.NoError(t, f.SetSheetRow("Sheet1", "A2", &[]int{3, 4}))
+		formulaType, ref := STCellFormulaTypeArray, "C1:C2"
+		assert.NoError(t, f.SetCellFormula("Sheet1", "C1", "A1:A2*B1:B2",
+			FormulaOpts{Ref: &ref, Type: &formulaType}))
+		result, err := f.CalcCellValue("Sheet1", "C1")
+		assert.NoError(t, err)
+		assert.Equal(t, "2", result)
+		result, err = f.CalcCellValue("Sheet1", "C2")
+		assert.NoError(t, err)
+		assert.Equal(t, "12", result)
+	})
+	t.Run("matrix_multiplication_with_defined_name", func(t *testing.T) {
+		f := NewFile()
+		assert.NoError(t, f.SetSheetRow("Sheet1", "A1", &[]int{1, 2}))
+		assert.NoError(t, f.SetSheetRow("Sheet1", "A2", &[]int{3, 4}))
+		assert.NoError(t, f.SetDefinedName(&DefinedName{
+			Name:     "matrix",
+			RefersTo: "Sheet1!$A$1:$A$2",
+		}))
+		formulaType, ref := STCellFormulaTypeArray, "C1:C2"
+		assert.NoError(t, f.SetCellFormula("Sheet1", "C1", "matrix*B1:B2+\"1\"",
+			FormulaOpts{Ref: &ref, Type: &formulaType}))
+		result, err := f.CalcCellValue("Sheet1", "C1")
+		assert.NoError(t, err)
+		assert.Equal(t, "3", result)
+		result, err = f.CalcCellValue("Sheet1", "C2")
+		assert.NoError(t, err)
+		assert.Equal(t, "13", result)
+	})
+	t.Run("columm_multiplication", func(t *testing.T) {
+		f := NewFile()
+		assert.NoError(t, f.SetSheetRow("Sheet1", "A1", &[]int{1, 2}))
+		assert.NoError(t, f.SetSheetRow("Sheet1", "A2", &[]int{3, 4}))
+		formulaType, ref := STCellFormulaTypeArray, "C1:C1048576"
+		assert.NoError(t, f.SetCellFormula("Sheet1", "C1", "A:A*B:B",
+			FormulaOpts{Ref: &ref, Type: &formulaType}))
+		result, err := f.CalcCellValue("Sheet1", "C1")
+		assert.NoError(t, err)
+		assert.Equal(t, "2", result)
+		result, err = f.CalcCellValue("Sheet1", "C2")
+		assert.NoError(t, err)
+		assert.Equal(t, "12", result)
+	})
+	t.Run("row_multiplication", func(t *testing.T) {
+		f := NewFile()
+		assert.NoError(t, f.SetSheetRow("Sheet1", "A1", &[]int{1, 2}))
+		assert.NoError(t, f.SetSheetRow("Sheet1", "A2", &[]int{3, 4}))
+		formulaType, ref := STCellFormulaTypeArray, "A3:XFD3"
+		assert.NoError(t, f.SetCellFormula("Sheet1", "A3", "1:1*2:2",
+			FormulaOpts{Ref: &ref, Type: &formulaType}))
+		result, err := f.CalcCellValue("Sheet1", "A3")
+		assert.NoError(t, err)
+		assert.Equal(t, "3", result)
+		result, err = f.CalcCellValue("Sheet1", "B3")
+		assert.NoError(t, err)
+		assert.Equal(t, "8", result)
+	})
 }
 
 func TestCalcTRANSPOSE(t *testing.T) {
@@ -5075,6 +5218,14 @@ func TestCalcDatabase(t *testing.T) {
 		assert.Equal(t, expected[0], result, formula)
 		assert.EqualError(t, err, expected[1], formula)
 	}
+}
+
+func TestCalcDBCS(t *testing.T) {
+	f := NewFile(Options{CultureInfo: CultureNameZhCN})
+	assert.NoError(t, f.SetCellFormula("Sheet1", "A1", "=DBCS(\"`~·!@#$¥%…^&*()_-+=[]{}\\|;:'\"\"<,>.?/01234567890 abc ABC \uff65\uff9e\uff9f \uff74\uff78\uff7e\uff99\")"))
+	result, err := f.CalcCellValue("Sheet1", "A1")
+	assert.NoError(t, err)
+	assert.Equal(t, "\uff40\uff5e\u00b7\uff01\uff20\uff03\uff04\u00a5\uff05\u2026\uff3e\uff06\uff0a\uff08\uff09\uff3f\uff0d\uff0b\uff1d\uff3b\uff3d\uff5b\uff5d\uff3c\uff5c\uff1b\uff1a\uff07\uff02\uff1c\uff0c\uff1e\uff0e\uff1f\uff0f\uff10\uff11\uff12\uff13\uff14\uff15\uff16\uff17\uff18\uff19\uff10\u3000\uff41\uff42\uff43\u3000\uff21\uff22\uff23\u3000\uff65\uff9e\uff9f\u3000\uff74\uff78\uff7e\uff99", result)
 }
 
 func TestCalcFORMULATEXT(t *testing.T) {
@@ -5427,13 +5578,13 @@ func TestCalcSUMIFSAndAVERAGEIFS(t *testing.T) {
 
 func TestCalcXIRR(t *testing.T) {
 	cellData := [][]interface{}{
-		{-100.00, "01/01/2016"},
-		{20.00, "04/01/2016"},
-		{40.00, "10/01/2016"},
-		{25.00, "02/01/2017"},
-		{8.00, "03/01/2017"},
-		{15.00, "06/01/2017"},
-		{-1e-10, "09/01/2017"},
+		{-100.00, 42370},
+		{20.00, 42461},
+		{40.00, 42644},
+		{25.00, 42767},
+		{8.00, 42795},
+		{15.00, 42887},
+		{-1e-10, 42979},
 	}
 	f := prepareCalcData(cellData)
 	formulaList := map[string]string{
@@ -5449,8 +5600,8 @@ func TestCalcXIRR(t *testing.T) {
 	calcError := map[string][]string{
 		"=XIRR()":                 {"#VALUE!", "XIRR requires 2 or 3 arguments"},
 		"=XIRR(A1:A4,B1:B4,-1)":   {"#VALUE!", "XIRR requires guess > -1"},
-		"=XIRR(\"\",B1:B4)":       {"#NUM!", "#NUM!"},
-		"=XIRR(A1:A4,\"\")":       {"#NUM!", "#NUM!"},
+		"=XIRR(\"\",B1:B4)":       {"#VALUE!", "#VALUE!"},
+		"=XIRR(A1:A4,\"\")":       {"#VALUE!", "#VALUE!"},
 		"=XIRR(A1:A4,B1:B4,\"\")": {"#NUM!", "#NUM!"},
 		"=XIRR(A2:A6,B2:B6)":      {"#NUM!", "#NUM!"},
 		"=XIRR(A2:A7,B2:B7)":      {"#NUM!", "#NUM!"},
@@ -5573,15 +5724,15 @@ func TestCalcXLOOKUP(t *testing.T) {
 func TestCalcXNPV(t *testing.T) {
 	cellData := [][]interface{}{
 		{nil, 0.05},
-		{"01/01/2016", -10000, nil},
-		{"02/01/2016", 2000},
-		{"05/01/2016", 2400},
-		{"07/01/2016", 2900},
-		{"11/01/2016", 3500},
-		{"01/01/2017", 4100},
+		{42370, -10000, nil},
+		{42401, 2000},
+		{42491, 2400},
+		{42552, 2900},
+		{42675, 3500},
+		{42736, 4100},
 		{},
-		{"02/01/2016"},
-		{"01/01/2016"},
+		{42401},
+		{42370},
 	}
 	f := prepareCalcData(cellData)
 	formulaList := map[string]string{
@@ -5597,9 +5748,9 @@ func TestCalcXNPV(t *testing.T) {
 		"=XNPV()":                 {"#VALUE!", "XNPV requires 3 arguments"},
 		"=XNPV(\"\",B2:B7,A2:A7)": {"#VALUE!", "strconv.ParseFloat: parsing \"\": invalid syntax"},
 		"=XNPV(0,B2:B7,A2:A7)":    {"#VALUE!", "XNPV requires rate > 0"},
-		"=XNPV(B1,\"\",A2:A7)":    {"#NUM!", "#NUM!"},
-		"=XNPV(B1,B2:B7,\"\")":    {"#NUM!", "#NUM!"},
-		"=XNPV(B1,B2:B7,C2:C7)":   {"#NUM!", "#NUM!"},
+		"=XNPV(B1,\"\",A2:A7)":    {"#VALUE!", "#VALUE!"},
+		"=XNPV(B1,B2:B7,\"\")":    {"#VALUE!", "#VALUE!"},
+		"=XNPV(B1,B2:B7,C2:C7)":   {"#VALUE!", "#VALUE!"},
 		"=XNPV(B1,B2,A2)":         {"#NUM!", "#NUM!"},
 		"=XNPV(B1,B2:B3,A2:A5)":   {"#NUM!", "#NUM!"},
 		"=XNPV(B1,B2:B3,A9:A10)":  {"#VALUE!", "#VALUE!"},
@@ -6169,6 +6320,46 @@ func TestNestedFunctionsWithOperators(t *testing.T) {
 	}
 }
 
+func TestFormulaRawCellValueOption(t *testing.T) {
+	f := NewFile()
+	rawTest := []struct {
+		value    string
+		raw      bool
+		expected string
+	}{
+		{"=VALUE(\"1.0E-07\")", false, "0.00"},
+		{"=VALUE(\"1.0E-07\")", true, "0.0000001"},
+		{"=\"text\"", false, "$text"},
+		{"=\"text\"", true, "text"},
+		{"=\"10e3\"", false, "$10e3"},
+		{"=\"10e3\"", true, "10e3"},
+		{"=\"10\" & \"e3\"", false, "$10e3"},
+		{"=\"10\" & \"e3\"", true, "10e3"},
+		{"=10e3", false, "10000.00"},
+		{"=10e3", true, "10000"},
+		{"=\"1111111111111111\"", false, "$1111111111111111"},
+		{"=\"1111111111111111\"", true, "1111111111111111"},
+		{"=1111111111111111", false, "1111111111111110.00"},
+		{"=1111111111111111", true, "1.11111111111111E+15"},
+		{"=1444.00000000003", false, "1444.00"},
+		{"=1444.00000000003", true, "1444.00000000003"},
+		{"=1444.000000000003", false, "1444.00"},
+		{"=1444.000000000003", true, "1444"},
+		{"=ROUND(1444.00000000000003,2)", false, "1444.00"},
+		{"=ROUND(1444.00000000000003,2)", true, "1444"},
+	}
+	exp := "0.00;0.00;;$@"
+	styleID, err := f.NewStyle(&Style{CustomNumFmt: &exp})
+	assert.NoError(t, err)
+	assert.NoError(t, f.SetCellStyle("Sheet1", "A1", "A1", styleID))
+	for _, test := range rawTest {
+		assert.NoError(t, f.SetCellFormula("Sheet1", "A1", test.value))
+		val, err := f.CalcCellValue("Sheet1", "A1", Options{RawCellValue: test.raw})
+		assert.NoError(t, err)
+		assert.Equal(t, test.expected, val)
+	}
+}
+
 func TestFormulaArgToToken(t *testing.T) {
 	assert.Equal(t,
 		efp.Token{
@@ -6225,6 +6416,35 @@ func TestCalcCellResolver(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, expected, result)
 	}
+	// Test calculates formula that reference date and error type cells
+	assert.NoError(t, f.SetCellValue("Sheet1", "C1", "20200208T080910.123"))
+	assert.NoError(t, f.SetCellValue("Sheet1", "C2", "2020-07-10 15:00:00.000"))
+	assert.NoError(t, f.SetCellValue("Sheet1", "C3", formulaErrorDIV))
+	ws, ok := f.Sheet.Load("xl/worksheets/sheet1.xml")
+	assert.True(t, ok)
+	ws.(*xlsxWorksheet).SheetData.Row[0].C[2].T = "d"
+	ws.(*xlsxWorksheet).SheetData.Row[0].C[2].V = "20200208T080910.123"
+	ws.(*xlsxWorksheet).SheetData.Row[1].C[2].T = "d"
+	ws.(*xlsxWorksheet).SheetData.Row[1].C[2].V = "2020-07-10 15:00:00.000"
+	ws.(*xlsxWorksheet).SheetData.Row[2].C[2].T = "e"
+	ws.(*xlsxWorksheet).SheetData.Row[2].C[2].V = formulaErrorDIV
+	for _, tbl := range [][]string{
+		{"D1", "=SUM(C1,1)", "43870.3397004977"},
+		{"D2", "=LEN(C2)", "23"},
+		{"D3", "=IFERROR(C3,TRUE)", "TRUE"},
+	} {
+		assert.NoError(t, f.SetCellFormula("Sheet1", tbl[0], tbl[1]))
+		result, err := f.CalcCellValue("Sheet1", tbl[0])
+		assert.NoError(t, err)
+		assert.Equal(t, tbl[2], result)
+	}
+	// Test calculates formula that reference invalid cell
+	assert.NoError(t, f.SetCellValue("Sheet1", "E1", "E1"))
+	assert.NoError(t, f.SetCellFormula("Sheet1", "F1", "=LEN(E1)"))
+	f.SharedStrings = nil
+	f.Pkg.Store(defaultXMLPathSharedStrings, MacintoshCyrillicCharset)
+	_, err := f.CalcCellValue("Sheet1", "F1")
+	assert.EqualError(t, err, "XML syntax error on line 1: invalid UTF-8")
 }
 
 func TestEvalInfixExp(t *testing.T) {
