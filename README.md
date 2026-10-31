@@ -1,3 +1,27 @@
+> [!WARNING]
+> **This fork is archived and no longer maintained.**
+>
+> It only existed to provide `File.ResizeTable`, which is now available as a
+> standalone module built on top of the official excelize release:
+> [github.com/go-mods/excelize-tables](https://github.com/go-mods/excelize-tables).
+>
+> To migrate, remove any `replace github.com/xuri/excelize/v2 => github.com/go-mods/excelize`
+> directive from your `go.mod`, then:
+>
+> ```shell
+> go get github.com/xuri/excelize/v2
+> go get github.com/go-mods/excelize-tables
+> ```
+>
+> ```go
+> import tables "github.com/go-mods/excelize-tables"
+>
+> // Before: err := f.ResizeTable("Articles", "A1:D20")
+> err := tables.Resize(f, "Articles", "A1:D20")
+> ```
+>
+> For the upstream library itself, see [qax-os/excelize](https://github.com/qax-os/excelize).
+
 <p align="center"><img width="650" src="./excelize.svg" alt="Excelize logo"></p>
 
 <p align="center">
